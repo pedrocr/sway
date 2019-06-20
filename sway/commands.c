@@ -112,6 +112,7 @@ static struct cmd_handler config_handlers[] = {
 static struct cmd_handler command_handlers[] = {
 	{ "border", cmd_border },
 	{ "create_output", cmd_create_output },
+	{ "default_fullscreen", cmd_default_fullscreen },
 	{ "exit", cmd_exit },
 	{ "floating", cmd_floating },
 	{ "fullscreen", cmd_fullscreen },

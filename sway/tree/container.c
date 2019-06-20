@@ -35,6 +35,7 @@ struct sway_container *container_create(struct sway_view *view) {
 	c->layout = L_NONE;
 	c->view = view;
 	c->alpha = 1.0f;
+	c->default_fullscreen_mode = FULLSCREEN_WORKSPACE;
 
 	if (!view) {
 		c->children = create_list();
@@ -951,8 +952,40 @@ static void set_fullscreen_iterator(struct sway_container *con, void *data) {
 	}
 }
 
-static void container_fullscreen_workspace(struct sway_container *con) {
+
+static void container_fullscreen_view(struct sway_container *con) {
 	if (!sway_assert(con->fullscreen_mode == FULLSCREEN_NONE,
+				"Expected a non-fullscreen container")) {
+		return;
+	}
+	bool enable = true;
+	set_fullscreen_iterator(con, &enable);
+	container_for_each_child(con, set_fullscreen_iterator, &enable);
+
+	con->saved_x = con->x;
+	con->saved_y = con->y;
+	con->saved_width = con->width;
+	con->saved_height = con->height;
+
+	if (con->workspace) {
+		struct sway_seat *seat;
+		struct sway_workspace *focus_ws;
+		wl_list_for_each(seat, &server.input->seats, link) {
+			focus_ws = seat_get_focused_workspace(seat);
+			if (focus_ws == con->workspace) {
+				seat_set_focus_container(seat, con);
+			}
+		}
+		arrange_workspace(con->workspace);
+	}
+
+	con->fullscreen_mode = FULLSCREEN_VIEW;
+	container_end_mouse_operation(con);
+	ipc_event_window(con, "fullscreen_mode");
+}
+
+static void container_fullscreen_workspace(struct sway_container *con) {
+	if (!sway_assert(con->fullscreen_mode == FULLSCREEN_NONE || con->fullscreen_mode == FULLSCREEN_VIEW,
 				"Expected a non-fullscreen container")) {
 		return;
 	}
@@ -983,7 +1016,7 @@ static void container_fullscreen_workspace(struct sway_container *con) {
 }
 
 static void container_fullscreen_global(struct sway_container *con) {
-	if (!sway_assert(con->fullscreen_mode == FULLSCREEN_NONE,
+	if (!sway_assert(con->fullscreen_mode == FULLSCREEN_NONE || con->fullscreen_mode == FULLSCREEN_VIEW,
 				"Expected a non-fullscreen container")) {
 		return;
 	}
@@ -1092,7 +1125,25 @@ void container_set_fullscreen(struct sway_container *con,
 		}
 		container_fullscreen_global(con);
 		break;
+	case FULLSCREEN_VIEW:
+		if (root->fullscreen_global) {
+			break;
+		}
+		if (con->workspace && con->workspace->fullscreen) {
+			break;
+		}
+		if (con->fullscreen_mode == FULLSCREEN_WORKSPACE) {
+			break;
+		}
+		// We only change to view if we're not currently fullscreen.
+		container_fullscreen_view(con);
+		break;
 	}
+}
+
+void container_request_fullscreen(struct sway_container *con, bool enable) {
+	enum sway_fullscreen_mode mode = enable ? con->default_fullscreen_mode : FULLSCREEN_NONE;
+	container_set_fullscreen(con, mode);
 }
 
 bool container_is_floating_or_child(struct sway_container *container) {
@@ -1398,6 +1449,9 @@ void container_replace(struct sway_container *container,
 		break;
 	case FULLSCREEN_GLOBAL:
 		container_fullscreen_global(replacement);
+		break;
+	case FULLSCREEN_VIEW:
+		container_fullscreen_view(replacement);
 		break;
 	case FULLSCREEN_NONE:
 		// noop

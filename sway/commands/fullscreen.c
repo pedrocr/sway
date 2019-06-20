@@ -34,20 +34,28 @@ struct cmd_results *cmd_fullscreen(int argc, char **argv) {
 	}
 
 	bool is_fullscreen = container &&
-		container->fullscreen_mode != FULLSCREEN_NONE;
-	bool global = false;
+		container->fullscreen_mode != FULLSCREEN_NONE &&
+		container->fullscreen_mode != FULLSCREEN_VIEW;
 	bool enable = !is_fullscreen;
 
+	enum sway_fullscreen_mode mode = container->default_fullscreen_mode;
+	// If we're explicitely being called to fullscreen always do it even
+	// if the default is to do nothing.
+	if (mode == FULLSCREEN_NONE || mode == FULLSCREEN_VIEW){
+		mode = FULLSCREEN_WORKSPACE;
+	}
 	if (argc >= 1) {
 		if (strcasecmp(argv[0], "global") == 0) {
-			global = true;
+			mode = FULLSCREEN_GLOBAL;
 		} else {
 			enable = parse_boolean(argv[0], is_fullscreen);
 		}
 	}
 
 	if (argc >= 2) {
-		global = strcasecmp(argv[1], "global") == 0;
+		if (strcasecmp(argv[1], "global") == 0) {
+			mode = FULLSCREEN_GLOBAL;
+		}
 	}
 
 	if (enable && node->type == N_WORKSPACE) {
@@ -57,12 +65,7 @@ struct cmd_results *cmd_fullscreen(int argc, char **argv) {
 		seat_set_focus_container(config->handler_context.seat, container);
 	}
 
-	enum sway_fullscreen_mode mode = FULLSCREEN_NONE;
-	if (enable) {
-		mode = global ? FULLSCREEN_GLOBAL : FULLSCREEN_WORKSPACE;
-	}
-
-	container_set_fullscreen(container, mode);
+	container_set_fullscreen(container, enable ? mode : FULLSCREEN_NONE);
 	arrange_root();
 
 	return cmd_results_new(CMD_SUCCESS, NULL);

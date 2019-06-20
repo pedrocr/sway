@@ -29,6 +29,7 @@ enum sway_fullscreen_mode {
 	FULLSCREEN_NONE,
 	FULLSCREEN_WORKSPACE,
 	FULLSCREEN_GLOBAL,
+	FULLSCREEN_VIEW,
 };
 
 struct sway_root;
@@ -99,6 +100,7 @@ struct sway_container {
 	double surface_width, surface_height;
 
 	enum sway_fullscreen_mode fullscreen_mode;
+	enum sway_fullscreen_mode default_fullscreen_mode;
 
 	enum sway_container_border border;
 
@@ -266,6 +268,8 @@ void container_end_mouse_operation(struct sway_container *container);
 
 void container_set_fullscreen(struct sway_container *con,
 		enum sway_fullscreen_mode mode);
+
+void container_request_fullscreen(struct sway_container *con, bool enable);
 
 /**
  * Convenience function.

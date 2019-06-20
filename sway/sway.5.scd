@@ -102,6 +102,12 @@ They are expected to be used with *bindsym* or at runtime through *swaymsg*(1).
 *border* toggle
 	Cycles through the available border styles.
 
+*default_fullscreen* view|workspace|global
+	Set the default fullscreen behavior for the container when not specified
+	specifically. Using the view mode allows disabling going fullscreen on 
+	client requests to have clients transition to their fullscreen interface, 
+	while still constraining them to their container.
+
 *exit*
 	Exit sway and end your Wayland session.
 
