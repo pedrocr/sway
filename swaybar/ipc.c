@@ -124,6 +124,7 @@ static bool ipc_parse_config(
 		list_del(config->bindings, 0);
 		free_binding(binding);
 	}
+
 	if (bindings) {
 		int length = json_object_array_length(bindings);
 		for (int i = 0; i < length; ++i) {
@@ -138,7 +139,7 @@ static bool ipc_parse_config(
 					json_object_object_get(bindobj, "release"));
 			list_add(config->bindings, binding);
 		}
-	}
+    }
 
 	json_object *colors = json_object_object_get(bar_config, "colors");
 	if (colors) {
@@ -270,6 +271,12 @@ static bool ipc_parse_config(
 		config->workspace_buttons = json_object_get_boolean(workspace_buttons);
 	}
 
+	json_object *workspace_buttons_all_outputs =
+		json_object_object_get(bar_config, "workspace_buttons_all_outputs");
+	if (workspace_buttons_all_outputs) {
+		config->workspace_buttons_all_outputs = json_object_get_boolean(workspace_buttons_all_outputs);
+	}
+
 	json_object *wrap_scroll = json_object_object_get(bar_config, "wrap_scroll");
 	if (wrap_scroll) {
 		config->wrap_scroll = json_object_get_boolean(wrap_scroll);
@@ -360,7 +367,8 @@ bool ipc_get_workspaces(struct swaybar *bar) {
 
 		wl_list_for_each(output, &bar->outputs, link) {
 			const char *ws_output = json_object_get_string(out);
-			if (ws_output != NULL && strcmp(ws_output, output->name) == 0) {
+			if (ws_output != NULL && (strcmp(ws_output, output->name) == 0 ||
+					bar->config->workspace_buttons_all_outputs)) {
 				struct swaybar_workspace *ws =
 					calloc(1, sizeof(struct swaybar_workspace));
 				ws->num = json_object_get_int(num);

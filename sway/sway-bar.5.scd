@@ -27,6 +27,10 @@ runtime.
 	an event code, which can be obtaining from *libinput debug-events*. To
 	disable the default behavior for a button, use the command _nop_.
 
+*workspace_buttons_all_outputs* yes|no
+	If set to _yes_ all workspaces are listed in the bar, even the ones that do
+	not belong to the output the bar is on. Default is _no_.
+
 *bindsym* [--release] button[1-9]|<event-name> <command>
 	Executes _command_ when the mouse button has been pressed (or if _released_
 	is given, when the button has been released). The buttons can be given as a
