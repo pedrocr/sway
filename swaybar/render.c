@@ -567,7 +567,8 @@ static uint32_t render_window_title(cairo_t *cairo,
 		return ideal_surface_height;
 	}
 	uint32_t width = text_width + ws_horizontal_padding * 2 + border_width * 2;
-	uint32_t max_width = fmin(width, max_x - x);
+	// Make sure the title fits leftover space with a small margin to the right
+	uint32_t max_width = fmin(width, fmax(0, max_x - x - 20));
 	uint32_t height = output->height * output->scale;
 
 	double text_y = height / 2.0 - text_height / 2.0;
