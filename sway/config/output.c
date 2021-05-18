@@ -15,6 +15,7 @@
 #include "sway/tree/root.h"
 #include "log.h"
 #include "util.h"
+#include "stringop.h"
 
 void output_get_identifier(char *identifier, size_t len,
 		struct sway_output *output) {
@@ -117,6 +118,62 @@ void merge_output_config(struct output_config *dst, struct output_config *src) {
 	if (src->dpms_state != 0) {
 		dst->dpms_state = src->dpms_state;
 	}
+}
+
+struct output_config *duplicate_output_config(const struct output_config *src) {
+	struct output_config *oc = calloc(1, sizeof(struct output_config));
+	if (oc == NULL) {
+		return NULL;
+	}
+	oc->name = strdup(src->name);
+	if (oc->name == NULL) {
+		free(oc);
+		return NULL;
+	}
+	oc->enabled = src->enabled;
+	oc->width = src->width;
+	oc->height = src->height;
+	oc->refresh_rate = src->refresh_rate;
+	oc->custom_mode = src->custom_mode;
+	oc->x = src->x;
+	oc->y = src->y;
+	oc->scale = src->scale;
+	oc->scale_filter = src->scale_filter;
+	oc->transform = src->transform;
+	oc->subpixel = src->subpixel;
+	oc->max_render_time = src->max_render_time;
+	oc->adaptive_sync = src->adaptive_sync;
+	if (src->background) {
+		oc->background = strdup(src->background);
+	}
+	if (src->background_option) {
+		oc->background_option = strdup(src->background_option);
+	}
+	if (src->background_fallback) {
+		oc->background_fallback = strdup(src->background_fallback);
+	}
+	oc->dpms_state = src->dpms_state;
+	return oc;
+}
+
+bool compare_output_config(const struct output_config *dst, const struct output_config *src) {
+	return dst->enabled == src->enabled &&
+		dst->width == src->width &&
+		dst->height == src->height &&
+		dst->x == src->x &&
+		dst->y == src->y &&
+		dst->scale == src->scale &&
+		dst->scale_filter == src->scale_filter &&
+		dst->subpixel == src->subpixel &&
+		dst->refresh_rate == src->refresh_rate &&
+		dst->custom_mode == src->custom_mode &&
+		dst->transform == src->transform &&
+		dst->max_render_time == src->max_render_time &&
+		dst->adaptive_sync == src->adaptive_sync &&
+		!lenient_strcmp(dst->background, src->background) &&
+		!lenient_strcmp(dst->background_option, src->background_option) &&
+		!lenient_strcmp(dst->background_fallback, src->background_fallback) &&
+		dst->dpms_state == src->dpms_state;
 }
 
 enum output_config_changes {
@@ -388,6 +445,16 @@ bool apply_output_config(struct output_config *oc, struct sway_output *output) {
 	}
 
 	struct wlr_output *wlr_output = output->wlr_output;
+
+	if (output->current_config && compare_output_config(oc, output->current_config)) {
+		// The output config is unchanged so bail out early
+		sway_log(SWAY_DEBUG, "Config for output %s is unchanged", wlr_output->name);
+		return true;
+	}
+	if (output->current_config) {
+		free_output_config(output->current_config);
+	}
+	output->current_config = duplicate_output_config(oc);
 
 	// Flag to prevent the output mode event handler from calling us
 	output->enabling = (!oc || oc->enabled);
